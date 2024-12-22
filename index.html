@@ -1,3 +1,5 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital@0;1&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet">
 
 <style>
@@ -255,10 +257,25 @@
         cursor: pointer;
     }
     @media only screen and (max-width: 600px) {
-        .search-container {
-            height: 50%;
-        }
+    .search-bar {
+        height: 100vh;
+        align-items: flex-start;
+        padding-bottom: 20vh;
+        font-size: 30px;
     }
+    .search-bar::placeholder {
+        font-size: 50px;
+    }
+    .settings-button {
+        padding: 2px;
+        font-size: 24px;
+    }
+    .popup {
+        width: 90%;
+        height: 90%;
+    }
+}
+
 </style>
 
 <div class="search-container">
@@ -744,3 +761,4 @@
         }
     }
 </script>
+
