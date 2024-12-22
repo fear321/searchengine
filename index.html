@@ -720,6 +720,12 @@
         return savedShortcuts ? JSON.parse(savedShortcuts) : {
             '.yt': 'https://www.youtube.com/results?search_query=',
             '.gh': 'https://github.com/search?q=',
+            '.g': 'https://www.google.com/search?q=',
+            '.maps': 'https://www.google.com/maps/search/',
+            '.tw': 'https://twitter.com/search?q=',
+            '.reddit': 'https://www.reddit.com/search/?q=',
+            '.amz': 'https://www.amazon.com/s?k=',
+            '.wiki': 'https://wikipedia.org/w/index.php?search='
         };
     }
 
@@ -844,14 +850,12 @@
         
         // Backspace veya Delete tuşuna basıldığında
         if (event.key === 'Backspace' || event.key === 'Delete') {
-            // Seçili metin varsa (önerilen metin), önerileri devre dışı bırak
             if (searchBar.selectionStart !== searchBar.selectionEnd) {
                 suggestionEnabled = false;
                 const userInput = searchBar.value.substring(0, searchBar.selectionStart);
                 searchBar.value = userInput;
                 return false;
             }
-            // Seçili metin yoksa da önerileri devre dışı bırak
             suggestionEnabled = false;
             return true;
         }
@@ -866,26 +870,59 @@
             const input = searchBar.value.trim();
             let url = '';
             
-            if (input.startsWith('http://') || input.startsWith('https://') || input.startsWith('www.')) {
-                url = input.startsWith('www.') ? 'https://' + input : input;
-            } else if (input.includes('.') && !input.includes(' ')) {
-                url = 'https://' + input;
-                saveToHistory(input);
-            } else {
-                url = 'https://www.google.com/search?q=' + encodeURIComponent(input);
+            // Kısayolları yükle
+            const shortcuts = loadShortcuts();
+            
+            // Kısayol kontrolü - metnin sonunda kısayol var mı diye kontrol et
+            let foundShortcut = false;
+            for (const [shortcut, shortcutUrl] of Object.entries(shortcuts)) {
+                if (input.endsWith(shortcut)) {
+                    // Kısayol bulundu
+                    const searchText = input.slice(0, -shortcut.length).trim();
+                    url = shortcutUrl + encodeURIComponent(searchText);
+                    foundShortcut = true;
+                    break;
+                }
             }
 
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // Eğer kısayol bulunamadıysa normal URL işleme
+            if (!foundShortcut) {
+                if (input.startsWith('http://') || input.startsWith('https://') || input.startsWith('www.')) {
+                    url = input.startsWith('www.') ? 'https://' + input : input;
+                } else if (input.includes('.') && !input.includes(' ')) {
+                    url = 'https://' + input;
+                    saveToHistory(input);
+                } else {
+                    url = 'https://www.google.com/search?q=' + encodeURIComponent(input);
+                }
+            }
+
+            try {
+                // Yeni sekme açma işlemi
+                const newTab = window.open();
+                if (newTab) {
+                    newTab.opener = null;
+                    newTab.location = url;
+                } else {
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.target = '_blank';
+                    link.rel = 'noopener noreferrer';
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                    }, 100);
+                }
+            } catch (e) {
+                console.error('Yeni sekme açma hatası:', e);
+                window.location.href = url;
+            }
             
             searchBar.value = '';
             searchBar.style.textAlign = 'center';
-            suggestionEnabled = true; // Enter'a basıldığında önerileri tekrar etkinleştir
+            suggestionEnabled = true;
         } else if (event.key === 'Tab') {
             event.preventDefault();
             searchBar.setSelectionRange(searchBar.value.length, searchBar.value.length);
