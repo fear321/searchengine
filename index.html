@@ -15,6 +15,7 @@
         align-items: center;
         height: 100vh;
         width: 100%;
+        position: relative;
     }
     
     .search-bar {
@@ -260,7 +261,7 @@
     .search-bar {
         height: 100vh;
         align-items: flex-start;
-        padding-bottom: 20vh;
+        padding-bottom: 50vh;
         font-size: 30px;
     }
     .search-bar::placeholder {
@@ -276,10 +277,63 @@
     }
 }
 
+/* Öneri listesi için stil güncellemesi */
+.suggestions {
+    position: absolute;
+    top: 60vh; /* Search bar'ın altında görünmesi için */
+    left: 0;
+    right: 0;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    max-height: 40vh; /* Ekranın alt kısmını kullan */
+    overflow-y: auto;
+    display: none;
+    z-index: 1000;
+    margin: 0 20px; /* Kenarlardan boşluk */
+    border-radius: 8px; /* Köşeleri yuvarla */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Gölge ekle */
+}
+
+.suggestion-item {
+    padding: 15px 20px;
+    cursor: pointer;
+    color: var(--text-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background: var(--border-color);
+}
+
+/* Search container pozisyonunu güncelle */
+.search-container {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+}
+
+/* Seçili metin için tema renkleri */
+.search-bar::selection {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+
+/* Firefox için ayrı seçici gerekiyor */
+.search-bar::-moz-selection {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+
 </style>
 
 <div class="search-container">
-    <input type="text" class="search-bar" placeholder="..." onkeydown="handleSearch(event)">
+    <input type="text" class="search-bar" placeholder="..." 
+           onkeydown="handleSearch(event)" 
+           oninput="showSuggestions(this.value)">
 </div>
 
 <button class="settings-button" onclick="togglePopup()">
@@ -462,6 +516,8 @@
         const searchBar = document.querySelector('.search-bar');
         searchBar.value = '';
         searchBar.focus();
+
+        console.log('Initial history:', loadHistory());
     });
 
     // Sayfa yenilenirken veya kapanırken search box'ı temizle
@@ -722,33 +778,103 @@
         localStorage.setItem('shortcuts', JSON.stringify(shortcuts));
     }
 
+    // Ziyaret geçmişini yükle
+    function loadHistory() {
+        return JSON.parse(localStorage.getItem('visitHistory') || '[]');
+    }
+
+    // Ziyaret geçmişini kaydet
+    function saveToHistory(url) {
+        let history = loadHistory();
+        
+        // URL'i www. veya http:// olmadan normalize et
+        url = url.replace(/^(https?:\/\/)?(www\.)?/, '');
+        
+        // Eğer URL zaten varsa, onu en üste taşı
+        history = history.filter(item => item !== url);
+        history.unshift(url);
+        
+        // Maksimum 10 URL sakla
+        history = history.slice(0, 10);
+        
+        localStorage.setItem('visitHistory', JSON.stringify(history));
+    }
+
+    // Global bir bayrak ekleyelim
+    let suggestionEnabled = true;
+
+    // Önerileri göster
+    function showSuggestions(input) {
+        const searchBar = document.querySelector('.search-bar');
+        
+        if (!input || !suggestionEnabled) {
+            searchBar.style.textAlign = 'center';
+            return;
+        }
+
+        const history = loadHistory();
+        const matches = history.filter(url => 
+            url.toLowerCase().startsWith(input.toLowerCase())
+        );
+
+        // Eğer eşleşme varsa ve kullanıcı yazının sonundaysa öneri göster
+        if (matches.length > 0 && searchBar.selectionStart === searchBar.value.length) {
+            const suggestion = matches[0];
+            const completion = suggestion.slice(input.length);
+            
+            if (completion) {
+                searchBar.value = input + completion;
+                searchBar.setSelectionRange(input.length, searchBar.value.length);
+            }
+        }
+        
+        searchBar.style.textAlign = 'center';
+    }
+
+    // Önerilen URL'i kullan
+    function useUrl(url) {
+        const searchBar = document.querySelector('.search-bar');
+        searchBar.value = url;
+        document.getElementById('suggestions').style.display = 'none';
+    }
+
+    // Mevcut handleSearch fonksiyonunu güncelle
     function handleSearch(event) {
+        const searchBar = document.querySelector('.search-bar');
+        
+        // Backspace veya Delete tuşuna basıldığında
+        if (event.key === 'Backspace' || event.key === 'Delete') {
+            // Seçili metin varsa (önerilen metin), önerileri devre dışı bırak
+            if (searchBar.selectionStart !== searchBar.selectionEnd) {
+                suggestionEnabled = false;
+                const userInput = searchBar.value.substring(0, searchBar.selectionStart);
+                searchBar.value = userInput;
+                return false;
+            }
+            // Seçili metin yoksa da önerileri devre dışı bırak
+            suggestionEnabled = false;
+            return true;
+        }
+
+        // Yeni karakter girildiğinde önerileri tekrar etkinleştir
+        if (event.key.length === 1 && event.key.match(/[a-zA-Z0-9.]/)) {
+            suggestionEnabled = true;
+        }
+
         if (event.key === 'Enter') {
             event.preventDefault();
-            const input = event.target.value.trim();
+            const input = searchBar.value.trim();
             let url = '';
             
-            // Kısayol kontrolü
-            for (let shortcut in shortcuts) {
-                if (input.endsWith(shortcut)) {
-                    const searchTerm = input.slice(0, -shortcut.length).trim();
-                    url = shortcuts[shortcut] + encodeURIComponent(searchTerm);
-                    break;
-                }
-            }
-            
-            // URL kontrolü
-            if (!url) {
-                if (input.startsWith('http://') || input.startsWith('https://') || input.startsWith('www.')) {
-                    url = input.startsWith('www.') ? 'https://' + input : input;
-                } else if (input.includes('.') && !input.includes(' ')) {
-                    url = 'https://' + input;
-                } else {
-                    url = 'https://www.google.com/search?q=' + encodeURIComponent(input);
-                }
+            if (input.startsWith('http://') || input.startsWith('https://') || input.startsWith('www.')) {
+                url = input.startsWith('www.') ? 'https://' + input : input;
+            } else if (input.includes('.') && !input.includes(' ')) {
+                url = 'https://' + input;
+                saveToHistory(input);
+            } else {
+                url = 'https://www.google.com/search?q=' + encodeURIComponent(input);
             }
 
-            // Yeni bir <a> elementi oluştur ve tıkla
             const link = document.createElement('a');
             link.href = url;
             link.target = '_blank';
@@ -757,8 +883,21 @@
             link.click();
             document.body.removeChild(link);
             
-            event.target.value = '';
+            searchBar.value = '';
+            searchBar.style.textAlign = 'center';
+            suggestionEnabled = true; // Enter'a basıldığında önerileri tekrar etkinleştir
+        } else if (event.key === 'Tab') {
+            event.preventDefault();
+            searchBar.setSelectionRange(searchBar.value.length, searchBar.value.length);
         }
     }
+
+    // Sayfa dışına tıklandığında önerileri gizle
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-container')) {
+            document.getElementById('suggestions').style.display = 'none';
+        }
+    });
 </script>
+
 
