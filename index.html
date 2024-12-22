@@ -254,79 +254,6 @@
         border-radius: 4px;
         cursor: pointer;
     }
-
-    /* Responsive tasarım için medya sorguları */
-    @media screen and (max-width: 768px) { /* Tablet */
-        .search-container {
-            align-items: flex-start; /* Üst kısma yakın olsun */
-            padding-top: 20vh; /* Ekranın üst kısmından boşluk */
-        }
-
-        .search-bar {
-            font-size: 60px; /* Büyük font boyutu */
-            height: auto; /* Otomatik yükseklik */
-            padding: 20px;
-        }
-
-        .search-bar::placeholder {
-            font-size: 90px; /* Daha büyük placeholder */
-        }
-
-        .popup {
-            width: 85%;
-            height: 75%;
-        }
-
-        .theme-grid {
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px;
-        }
-
-        .settings-button {
-            padding: 20px;
-            font-size: 24px;
-        }
-    }
-
-    @media screen and (max-width: 480px) { /* Mobil */
-        .search-container {
-            padding-top: 15vh; /* Mobilde biraz daha yukarıda */
-        }
-
-        .search-bar {
-            font-size: 50px; /* Hala büyük ama tablet'ten biraz küçük */
-            padding: 15px;
-        }
-
-        .search-bar::placeholder {
-            font-size: 70px;
-        }
-
-        .popup {
-            width: 95%;
-            height: 85%;
-        }
-
-        .theme-button {
-            padding: 20px;
-            font-size: 20px;
-        }
-
-        .settings-button {
-            padding: 22px;
-            font-size: 28px;
-        }
-
-        .shortcut-item input {
-            padding: 15px;
-            font-size: 18px;
-        }
-
-        .add-shortcut-btn {
-            padding: 20px;
-            font-size: 18px;
-        }
-    }
 </style>
 
 <div class="search-container">
@@ -713,9 +640,8 @@
     function loadShortcuts() {
         const savedShortcuts = localStorage.getItem('shortcuts');
         return savedShortcuts ? JSON.parse(savedShortcuts) : {
-            '/yt': 'https://www.youtube.com/results?search_query=',
-            '/gh': 'https://github.com/search?q=',
-            '/g': 'https://www.google.com/search?q='
+            '.yt': 'https://www.youtube.com/results?search_query=',
+            '.gh': 'https://github.com/search?q=',
         };
     }
 
